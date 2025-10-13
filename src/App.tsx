@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Train, Ticket, Play, Pause, RotateCcw, Plus, Minus, BarChart3, Users } from 'lucide-react';
+import { Clock, Train, Ticket, Play, Pause, RotateCcw, Plus, Minus, BarChart3} from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Train route interface
@@ -32,6 +32,15 @@ interface SchedulingResult {
   turnaroundTime: number;
   responseTime: number;
 }
+//interface for news api
+interface NewsArticle {
+  title: string;
+  description: string;
+  url: string;
+  urlToImage: string;
+  publishedAt: string;
+  source: { name: string };
+}
 
 // Simulation step interface
 interface SimulationStep {
@@ -58,7 +67,7 @@ const trainRoutes: TrainRoute[] = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'routes' | 'simulation'>('routes');
+  const [activeTab, setActiveTab] = useState<'routes' | 'simulation'|'news'>('routes');
   const [cartItems, setCartItems] = useState<TrainRoute[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [nextBookingId, setNextBookingId] = useState(1);
@@ -70,6 +79,9 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [simulationSpeed, setSimulationSpeed] = useState(1000);
   const intervalRef = useRef<NodeJS.Timeout>();
+  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [loadingNews, setLoadingNews] = useState(false);
+  const [error, setError] = useState('');
 
   // FCFS Scheduling Algorithm - processes bookings in arrival order
   const calculateFCFS = (bookingList: Booking[]): { results: SchedulingResult[], simulation: SimulationStep[] } => {
@@ -204,6 +216,27 @@ function App() {
       }
     };
   }, [isPlaying, currentStep, simulation.length, simulationSpeed]);
+//news api useeffect
+  useEffect(() => {
+  const fetchNews = async () => {
+    setLoadingNews(true);
+    try {
+      const res = await fetch(
+        "https://newsapi.org/v2/everything?q=railway%20india&language=en&sortBy=publishedAt&pageSize=8&apiKey=f0ceac18b1d941ccac2e02c83f397517"
+      );
+      const data = await res.json();
+      if (data.articles) setNews(data.articles);
+      else setError("No articles found.");
+    } catch {
+      setError("Failed to load news.");
+    } finally {
+      setLoadingNews(false);
+    }
+  };
+
+  fetchNews();
+}, []);
+
 
   // Toggle simulation play/pause
   const toggleSimulation = () => {
@@ -329,12 +362,24 @@ function App() {
               >
                 📊 FCFS Simulation
               </button>
+              <button
+  onClick={() => setActiveTab('news')}
+  className={`px-6 py-3 rounded-lg font-medium transition-all ${
+      activeTab === 'news' 
+      ? 'bg-blue-600 text-white shadow-lg' 
+      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+  }`}
+>
+  📰 Railway News
+</button>
             </nav>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+      
+  
         {activeTab === 'routes' ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Routes Section */}
@@ -865,8 +910,52 @@ function App() {
           </div>
         )}
       </main>
+      {activeTab === 'news' && (
+  <div className="space-y-8">
+    <div className="bg-white rounded-xl shadow-lg p-6">
+      <h2 className="text-3xl font-bold text-gray-800 mb-4">📰 Latest Railway News</h2>
 
-      <style jsx>{`
+      {loadingNews && <p className="text-gray-500">Loading latest news...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {news.map((article, index) => (
+          <div key={index} className="bg-gray-50 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all">
+            {article.urlToImage && (
+              <img
+                src={article.urlToImage}
+                alt={article.title}
+                className="w-full h-48 object-cover"
+              />
+            )}
+            <div className="p-4">
+              <h3 className="font-semibold text-lg text-gray-800 mb-2 line-clamp-2">
+                {article.title}
+              </h3>
+              <p className="text-sm text-gray-600 line-clamp-3 mb-3">
+                {article.description || "No description available."}
+              </p>
+              <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
+                <span>{article.source.name}</span>
+                <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+              </div>
+              <a
+                href={article.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition"
+              >
+                Read More →
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+      )}
+
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
