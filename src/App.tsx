@@ -220,14 +220,30 @@ function App() {
   useEffect(() => {
   const fetchNews = async () => {
     setLoadingNews(true);
+    setError('');
     try {
-      // This should be calling YOUR Netlify function, not NewsAPI directly
       const res = await fetch("/.netlify/functions/news");
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Response error:', res.status, errorText);
+        setError(`Failed to load news: ${res.status}`);
+        return;
+      }
+      
       const data = await res.json();
-      if (data.articles) setNews(data.articles);
-      else setError("No articles found.");
-    } catch {
-      setError("Failed to load news.");
+      console.log('News data:', data);
+      
+      if (data.articles && data.articles.length > 0) {
+        setNews(data.articles);
+      } else if (data.error) {
+        setError(`API Error: ${data.error}`);
+      } else {
+        setError("No articles found.");
+      }
+    } catch (err: any) {
+      console.error('Fetch error:', err);
+      setError(`Failed to load news: ${err.message}`);
     } finally {
       setLoadingNews(false);
     }
@@ -377,8 +393,6 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-      
-  
         {activeTab === 'routes' ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Routes Section */}
@@ -496,7 +510,7 @@ function App() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'simulation' ? (
           <div className="space-y-8">
             {/* Control Panel */}
             <div className="bg-white rounded-xl shadow-lg p-6">
@@ -907,52 +921,51 @@ function App() {
               </div>
             </div>
           </div>
-        )}
-      </main>
-      {activeTab === 'news' && (
-  <div className="space-y-8">
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <h2 className="text-3xl font-bold text-gray-800 mb-4">📰 Latest Railway News</h2>
+        ) : activeTab === 'news' ? (
+          <div className="space-y-8">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">📰 Latest Railway News</h2>
 
-      {loadingNews && <p className="text-gray-500">Loading latest news...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+              {loadingNews && <p className="text-gray-500">Loading latest news...</p>}
+              {error && <p className="text-red-500">{error}</p>}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {news.map((article, index) => (
-          <div key={index} className="bg-gray-50 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all">
-            {article.urlToImage && (
-              <img
-                src={article.urlToImage}
-                alt={article.title}
-                className="w-full h-48 object-cover"
-              />
-            )}
-            <div className="p-4">
-              <h3 className="font-semibold text-lg text-gray-800 mb-2 line-clamp-2">
-                {article.title}
-              </h3>
-              <p className="text-sm text-gray-600 line-clamp-3 mb-3">
-                {article.description || "No description available."}
-              </p>
-              <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
-                <span>{article.source.name}</span>
-                <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {news.map((article, index) => (
+                  <div key={index} className="bg-gray-50 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all">
+                    {article.urlToImage && (
+                      <img
+                        src={article.urlToImage}
+                        alt={article.title}
+                        className="w-full h-48 object-cover"
+                      />
+                    )}
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg text-gray-800 mb-2 line-clamp-2">
+                        {article.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 line-clamp-3 mb-3">
+                        {article.description || "No description available."}
+                      </p>
+                      <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
+                        <span>{article.source.name}</span>
+                        <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+                      </div>
+                      <a
+                        href={article.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition"
+                      >
+                        Read More →
+                      </a>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition"
-              >
-                Read More →
-              </a>
             </div>
           </div>
-        ))}
-      </div>
-    </div>
-  </div>
-      )}
+        ) : null}
+      </main>
 
       <style>{`
         @keyframes fadeIn {
