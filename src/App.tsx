@@ -221,9 +221,8 @@ function App() {
   const fetchNews = async () => {
     setLoadingNews(true);
     try {
-      const res = await fetch(
-        "https://newsapi.org/v2/everything?q=railway%20india&language=en&sortBy=publishedAt&pageSize=8&apiKey=f0ceac18b1d941ccac2e02c83f397517"
-      );
+      // This should be calling YOUR Netlify function, not NewsAPI directly
+      const res = await fetch("/.netlify/functions/news");
       const data = await res.json();
       if (data.articles) setNews(data.articles);
       else setError("No articles found.");
