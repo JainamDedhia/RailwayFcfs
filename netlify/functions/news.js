@@ -3,10 +3,6 @@ const https = require('https');
 exports.handler = async function(event, context) {
   const apiKey = process.env.NEWS_API_KEY;
 
-  // Debug: Check if API key exists
-  console.log('API Key exists:', !!apiKey);
-  console.log('API Key length:', apiKey?.length || 0);
-
   if (!apiKey) {
     return {
       statusCode: 500,
@@ -15,10 +11,19 @@ exports.handler = async function(event, context) {
   }
 
   const query = encodeURIComponent("railway india");
-  const url = `https://newsapi.org/v2/everything?q=${query}&language=en&sortBy=publishedAt&pageSize=8&apiKey=${apiKey}`;
+  const path = `/v2/everything?q=${query}&language=en&sortBy=publishedAt&pageSize=8&apiKey=${apiKey}`;
+
+  const options = {
+    hostname: 'newsapi.org',
+    path: path,
+    method: 'GET',
+    headers: {
+      'User-Agent': 'RailwayTicketOS/1.0',  // ← This is the fix!
+    }
+  };
 
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    const req = https.request(options, (res) => {
       let data = '';
 
       res.on('data', (chunk) => {
@@ -44,12 +49,16 @@ exports.handler = async function(event, context) {
           });
         }
       });
-    }).on('error', (err) => {
+    });
+
+    req.on('error', (err) => {
       console.error('Request error:', err);
       resolve({
         statusCode: 500,
         body: JSON.stringify({ error: 'Request failed', details: err.message }),
       });
     });
+
+    req.end();
   });
 };
